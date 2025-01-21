@@ -1,0 +1,1 @@
+# flask_inventario-movil

@@ -1,0 +1,33 @@
+{
+  "name": "login-page-app",
+  "version": "1.0.0",
+  "description": "Aplicación de inicio de sesión y búsqueda de productos con Node.js y PostgreSQL",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "dotenv": "^10.0.0",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "passport": "^0.4.1",
+    "passport-local": "^1.0.0",
+    "pg": "^8.13.1",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "postgresql",
+    "authentication",
+    "search"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
