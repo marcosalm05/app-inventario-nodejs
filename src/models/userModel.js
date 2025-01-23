@@ -1,4 +1,4 @@
-const pool = require('../config/db'); // Asegúrate de que la ruta es correcta
+const pool = require('../config/db');
 
 class User {
     constructor(id, username, password) {

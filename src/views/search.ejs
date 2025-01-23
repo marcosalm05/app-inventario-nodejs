@@ -8,50 +8,184 @@
 </head>
 <body>
     <div class="container">
-        <h1>Búsqueda de Productos</h1>
-        <input type="text" id="searchInput" placeholder="Ingrese el código del producto" autofocus>
+        <h1>Control de Inventario</h1>
+        <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus>
         <button id="searchButton">Buscar</button>
+
         <div id="results"></div>
+        <div id="errorContainer" class="error-message"></div>
+        <div id="successContainer" class="success-container"></div>
+
+        <!-- Modificar Stock -->
+        <div id="stockContainer" class="stock-container" style="display: none;">
+            <h2>Modificar Stock</h2>
+            <p><strong class="anterior">Anterior:</strong> <span id="currentStock">0</span></p>
+            <p><strong class="nuevo">Nuevo:</strong></p>
+            <form id="stockForm">
+                <input type="number" id="newStock" name="newStock" placeholder="Nuevo stock">
+                <button type="submit">Actualizar Inventario</button>
+                <button type="button" id="cancelButton">Cancelar</button>
+            </form>
+        </div>
+
+        <!-- Historial de Productos Modificados -->
+        <div id="historyContainer" class="history-container">
+            <h2>Historial de Búsqueda</h2>
+            <ul id="historyList"></ul>
+            <button id="clearHistoryButton">Limpiar</button>
+        </div>
     </div>
 
     <script>
-        document.getElementById('searchInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                searchProduct();
+    document.addEventListener('DOMContentLoaded', function () {
+            const historyList = [];
+
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const clearHistoryButton = document.getElementById('clearHistoryButton');
+            const stockForm = document.getElementById('stockForm');
+            const cancelButton = document.getElementById('cancelButton');
+            const errorContainer = document.getElementById('errorContainer');
+            const successContainer = document.getElementById('successContainer');
+
+            if (searchInput) {
+                searchInput.addEventListener("input", function () {
+                  searchInput.value = searchInput.value.trim();
+                });
+                searchInput.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        searchProduct();
+                    }
+                });
+            }
+
+            if (searchButton) {
+                searchButton.addEventListener('click', searchProduct);
+            }
+
+            if (clearHistoryButton) {
+                clearHistoryButton.addEventListener('click', clearHistory);
+            }
+
+            if(cancelButton){
+                cancelButton.addEventListener('click', function(){
+                    searchInput.value = '';
+                    document.getElementById('stockContainer').style.display = 'none';
+                    document.getElementById('results').textContent = '';
+                }); 
+            }
+
+            if (stockForm) {
+                stockForm.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    const token = localStorage.getItem('token');
+                    const newStock = parseFloat(document.getElementById('newStock').value);
+                    const currentStock = parseFloat(document.getElementById('currentStock').textContent);
+                    const productCode = document.getElementById('searchInput').value;
+                    const description = document.getElementById('results').textContent;
+                    const productId = document.getElementById('stockContainer').dataset.productId;
+
+                    if (isNaN(newStock)) {
+                        errorContainer.textContent = 'Por favor, ingrese el nuevo stock.';
+                        showMessages(errorContainer);
+                        return;
+                    }
+
+                    if (Number.isInteger(newStock) && newStock.toString().length > 5) {
+                        errorContainer.textContent = 'El stock no puede superar los cinco dígitos.';
+                        showMessages(errorContainer);
+                        return;
+                    }
+
+                    fetch('/products/api/inventory', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            "Authorization": `Token ${token}`
+                        },
+                        body: JSON.stringify({ id: productId, stock: newStock, dep: 1 })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('currentStock').textContent = data.data.product.stock;
+                                successContainer.textContent = data.message;
+                                showMessages(successContainer);
+                                document.getElementById('newStock').value = '';
+                                const historyUl = document.getElementById('historyList');
+                                const historyItem = document.createElement('li');
+                                historyItem.textContent = `${description} Anterior:${currentStock} Actual:${data.data.product.stock}`;
+                                historyUl.appendChild(historyItem);
+                            } else {
+                                errorContainer.textContent = data.error || 'Ocurrió un error al actualizar el stock.';
+                                showMessages(errorContainer);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            errorContainer.textContent = 'Ocurrió un error al actualizar el stock.';
+                            showMessages(errorContainer);
+                        });
+                });
+            }
+
+            function searchProduct() {
+                const token = localStorage.getItem('token');
+                const productCode = document.getElementById('searchInput').value.trim();
+                const errorContainer = document.getElementById('errorContainer');
+                const resultsDiv = document.getElementById('results');
+
+                if (!productCode) {
+                    errorContainer.textContent = 'Por favor, ingrese un código de producto.';
+                    showMessages(errorContainer);
+                    return;
+                }
+
+                fetch(`/products/api/search?cod=${productCode}&dep=1`, {
+                    method: 'GET',
+                    headers: {
+                        "Authorization": `Token ${token}`
+                    }
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsDiv.innerHTML = '';
+                        errorContainer.textContent = '';
+
+                        if (data.length > 0) {
+                            const product = data[0];
+                            resultsDiv.textContent = `Código: ${product.code}, Descripción: ${product.description}`;
+
+                            document.getElementById('stockContainer').style.display = 'block';
+                            document.getElementById('stockContainer').classList.add('fade-in');
+                            document.getElementById('stockContainer').scrollIntoView({ behavior: 'smooth' });
+                            document.getElementById('currentStock').textContent = product.stock;
+                            document.getElementById('newStock').value = '';
+
+                            document.getElementById('stockContainer').dataset.productId = product.id;
+                            document.getElementById('stockContainer').dataset.previousStock = product.stock;
+                        } else {
+                            resultsDiv.textContent = 'No se encontraron productos.';
+                            document.getElementById('stockContainer').style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        errorContainer.textContent = 'Ocurrió un error durante la búsqueda.';
+                        showMessages(errorContainer);
+                    });
+            }
+
+            function clearHistory() {
+                const historyUl = document.getElementById('historyList');
+                historyUl.innerHTML = '';
+            }
+            
+            function showMessages(container){
+                container.style.display = 'block';
+                setTimeout(() => {
+                    container.style.display = 'none';
+                }, 3000);
             }
         });
-
-        document.getElementById('searchButton').addEventListener('click', searchProduct);
-
-        function searchProduct() {
-            const token = localStorage.getItem('token'); // Suponiendo que el token se almacena en localStorage
-            const productCode = document.getElementById('searchInput').value;
-
-            fetch(`/api/products/search?code=${productCode}`, {
-                method: 'GET',
-                headers: {
-                    "Authorization": `Token ${token}`
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = '';
-
-                if (data.length > 0) {
-                    data.forEach(product => {
-                        const productDiv = document.createElement('div');
-                        productDiv.textContent = `Código: ${product.code}, Nombre: ${product.name}`;
-                        resultsDiv.appendChild(productDiv);
-                    });
-                } else {
-                    resultsDiv.textContent = 'No se encontraron productos.';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        }
     </script>
-</body>
-</html>

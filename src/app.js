@@ -4,6 +4,7 @@ const express = require('express');
 const session = require('express-session');
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
+const coreRoutes = require('./routes/coreRoutes');
 const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,10 +25,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rutas
 app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
+app.use(coreRoutes);
 
 // Página de inicio
 app.get('/', (req, res) => {
-    res.redirect('/auth/login');
+    res.redirect('login');
 });
 
 // Iniciar el servidor

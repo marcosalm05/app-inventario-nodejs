@@ -3,23 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Web Inventario</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <div class="login-container">
-        <img src="./iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo Siscotic" class="login-icon">
-        <form action="/auth/login" method="POST">
+        <img src="../public/iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo Siscotic" class="login-icon">
+        <form id="loginForm" action="/auth/api/login" method="POST">
             <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" required>
+                <label for="username">USUARIO:</label>
+                <input type="text" id="username" class="input-username" name="username" required>
             </div>
             <div class="form-group">
-                <label for="password">Password:</label>
+                <label for="password">CONTRASEÑA:</label>
                 <input type="password" id="password" name="password" required>
             </div>
-            <button type="submit">Login</button>
+            <button type="submit">INICIAR SESIÓN</button>
+            <div id="errorContainer" class="error-message"></div>
         </form>
     </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+    
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorContainer = document.getElementById('errorContainer');
+    
+            if (!username || !password) {
+                errorContainer.textContent = 'Todos los campos son requeridos';
+                return;
+            }
+    
+            fetch('/auth/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Guardar el token en localStorage
+                    localStorage.setItem('token', data.data.token)
+                    // Redireccionar a la página de búsqueda
+                    window.location.href = '/search';
+                } else {
+                    errorContainer.textContent = data.error || 'Credenciales inválidas';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorContainer.textContent = 'Ocurrió un error durante el inicio de sesión';
+            });
+        });
+    </script>
 </body>
 </html>

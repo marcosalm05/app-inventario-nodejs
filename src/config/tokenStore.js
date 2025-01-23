@@ -1,8 +1,8 @@
 const tokenStore = new Map();
 
 // Funciones para manipular los tokens
-function addToken(token, user) {
-    tokenStore.set(token, user);
+function addToken(token, data) {
+    tokenStore.set(token, data);
 }
 
 function getUserByToken(token) {
