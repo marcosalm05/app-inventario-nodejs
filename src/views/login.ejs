@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="login-container">
-        <img src="../public/iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo Siscotic" class="login-icon">
+        <img src="iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo del sistema Siscotic" class="login-icon">
         <form id="loginForm" action="/auth/api/login" method="POST">
             <div class="form-group">
                 <label for="username">USUARIO:</label>
@@ -24,41 +24,45 @@
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function (event) {
-            event.preventDefault();
-    
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorContainer = document.getElementById('errorContainer');
-    
-            if (!username || !password) {
-                errorContainer.textContent = 'Todos los campos son requeridos';
-                return;
+     document.getElementById('loginForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const errorContainer = document.getElementById('errorContainer');
+    const submitButton = document.querySelector('button[type="submit"]');
+
+
+
+    // Mostrar indicador de carga
+    submitButton.disabled = true;
+    submitButton.textContent = 'Iniciando sesión...';
+
+    fetch('/auth/api/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ username, password })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                localStorage.setItem('token', data.data.token);
+                window.location.href = '/search';
+            } else {
+                errorContainer.textContent = data.error || 'Credenciales inválidas';
             }
-    
-            fetch('/auth/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, password })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Guardar el token en localStorage
-                    localStorage.setItem('token', data.data.token)
-                    // Redireccionar a la página de búsqueda
-                    window.location.href = '/search';
-                } else {
-                    errorContainer.textContent = data.error || 'Credenciales inválidas';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                errorContainer.textContent = 'Ocurrió un error durante el inicio de sesión';
-            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            errorContainer.textContent = 'Ocurrió un error durante el inicio de sesión';
+        })
+        .finally(() => {
+            submitButton.disabled = false;
+            submitButton.textContent = 'INICIAR SESIÓN';
         });
+});
     </script>
 </body>
 </html>
