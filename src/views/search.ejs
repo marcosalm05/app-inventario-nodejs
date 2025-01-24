@@ -42,7 +42,7 @@
       </form>
     </div>
 
-    <!-- Historial -->
+    <!-- Historiall -->
     <div id="historyContainer" class="history-container">
       <h2>Historial de Búsqueda</h2>
       <ul id="historyList"></ul>
@@ -51,13 +51,7 @@
   </div>
 
   <script>
-    function truncateText(text, maxLength) {
-      if (text.length > maxLength) {
-        return text.slice(0, maxLength);
-      }
-      return text;
-    }
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
       const searchInput = document.getElementById("searchInput");
       const searchButton = document.getElementById("searchButton");
       const clearHistoryButton = document.getElementById("clearHistoryButton");
@@ -70,92 +64,32 @@
 
       loadHistory();
 
-      //Manejo de la búsqueda
-
+      // Buscar producto
       searchButton.addEventListener("click", searchProduct);
-      searchButton.addEventListener("keypress", function(e) {
-        if (e.key === "Enter") searchButton();
+      searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") searchProduct();
       });
 
-      //Manejo del formulario
+      // Actualizar stock
       stockForm.addEventListener("submit", updateStock);
       cancelButton.addEventListener("click", resetStockForm);
 
-
-      //Historial
-
-      document
-        .getElementById("clearHistoryButton")
-        .addEventListener("click", clearHistory);
+      // Historial
+      clearHistoryButton.addEventListener("click", clearHistory);
 
       function searchProduct() {
         const productCode = searchInput.value.trim();
-        if (!productCode) return showError("Por favor, ingrese un código de producto.")
+        if (!productCode) return showError("Por favor, ingrese un código de producto.");
 
         fetch(`/products/api/search?cod=${productCode}&dep=1`, {
-            method: "GET",
-            headers: {
-              Authorization: `Token ${localStorage.getItem("token")}`
-            },
-          })
+          method: "GET",
+          headers: {
+            Authorization: `Token ${localStorage.getItem("token")}`,
+          },
+        })
           .then((res) => res.json())
           .then((data) => handleSearchResult(data))
           .catch(() => showError("Ocurrió un error al buscar el producto."));
-      }
-
-      function handleSearchResult(data) {
-        if (data.length > 0) {
-          const product = data[0];
-          displayProduct(product);
-          stockContainer.dataset.id = product.id;
-          stockContainer.classList.remove("hidden");
-        } else {
-          showError("No se encontraron productos con ese código.");
-          stockContainer.classList.add("hidden");
-        }
-
-        if (searchInput) {
-          searchInput.addEventListener("input", function() {
-            searchInput.value = searchInput.value.trim();
-          });
-          searchInput.addEventListener("keypress", function(e) {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const productCode = searchInput.Value;
-              if (!productCode) {
-                errorContainer.textContent =
-                  "Por favor, ingrese un código de producto.";
-                showMessages(errorContainer);
-                return;
-              }
-              searchProduct();
-            }
-          });
-        }
-      }
-
-      function updateStock(event) {
-        event.preventDefault();
-        const newStock = parseInt(document.getElementById("newStock").value, 10);
-        const productId = stockContainer.dataset.productId;
-
-        if (isNaN(newStock)) return showError("Por favor, ingrese un valor numérico.");
-
-        fetch("/products/api/inventory", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              id: productId,
-              stock: newStock,
-              dep: 1
-            }),
-          })
-          .then((res) => res.json())
-          .then((data) => handleStockUpdate(data, newStock))
-          .catch(() => showError("Ocurrió un error al actualizar el inventario."));
       }
 
       function handleSearchResult(data) {
@@ -175,30 +109,24 @@
         const newStock = parseInt(document.getElementById("newStock").value, 10);
         const productId = stockContainer.dataset.productId;
 
-        if (isNan(newStock)) return showError("Por favor, ingrese un valor numérico.");
+        if (isNaN(newStock)) return showError("Por favor, ingrese un valor numérico.");
 
         fetch("/products/api/inventory", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              id: productId,
-              stock: newStock,
-              dep: 1
-            }),
-          })
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ id: productId, stock: newStock, dep: 1 }),
+        })
           .then((res) => res.json())
           .then((data) => handleStockUpdate(data, newStock))
           .catch(() => showError("Ocurrió un error al actualizar el inventario."));
       }
 
-
       function handleStockUpdate(data, newStock) {
         if (data.success) {
-          const currentStock = document.getElementById("currentStock");
-          currentStock.textContent = newStock;
+          document.getElementById("currentStock").textContent = newStock;
           addToHistory(`Stock actualizado: ${newStock}`);
           showSuccess("Stock actualizado correctamente.");
         } else {
@@ -209,17 +137,13 @@
       function showError(message) {
         errorContainer.textContent = message;
         errorContainer.style.display = "block";
-        setTimeout(() => {
-          errorContainer.style.display = "none";
-        }, 3000);
+        setTimeout(() => (errorContainer.style.display = "none"), 3000);
       }
 
       function showSuccess(message) {
         successContainer.textContent = message;
         successContainer.style.display = "block";
-        setTimeout(() => {
-          successContainer.style.display = "none";
-        }, 3000);
+        setTimeout(() => (successContainer.style.display = "none"), 3000);
       }
 
       function addToHistory(item) {
@@ -251,29 +175,24 @@
 
       function displayProduct(product) {
         const description = product.description;
-        const truncateDescription = truncateText(description, 20);
-        document.getElementById("results").innerHTML = `    
+        const truncatedDescription = description.length > 20 ? description.slice(0, 20) : description;
+
+        document.getElementById("results").innerHTML = `
           <span id="description">${truncatedDescription}</span>
-      ${
-        description.length > 20
-          ? '<a href="#" id="showMore" class="show-more">... Ver más</a>'
-          : ""
-      }
-    `;
+          ${
+            description.length > 20
+              ? '<a href="#" id="showMore" class="show-more">...</a>'
+              : ""
+          }
+        `;
+
         if (description.length > 20) {
-          document
-            .getElementById("showMore")
-            .addEventListener("click", (e) => {
-              e.preventDefault();
-              document.getElementById("description").textContent = description;
-            })
+          document.getElementById("showMore").addEventListener("click", (e) => {
+            e.preventDefault();
+            document.getElementById("description").textContent = description;
+          });
         }
       }
-
-      function truncateText(text, maxLength) {
-        return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
-      }
-
     });
   </script>
 </body>
