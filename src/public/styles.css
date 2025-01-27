@@ -27,7 +27,8 @@ body {
     align-items: center;
     height: 100vh;
     margin: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.5;
     background-color: var(--bg-light);
 }
 
@@ -67,6 +68,10 @@ body {
     border-radius: 4px;
     border: 1px solid #ccc;
     box-sizing: border-box;
+}
+
+p{
+    text-align: left;
 }
 
 /* === Buttons === */
@@ -129,14 +134,25 @@ input[type="text"], input[type="number"] {
 }
 
 /* === Stock and History Container ===*/
+.stock-container{
+    border: 2px solid transparent;
+    background-image: linear-gradient(to right, #90d5ff, #fdfeff);
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
 .stock-container, .history-container {
-    margin-top: 20 px;
+    margin-top: 20px;
     margin-bottom: 20px;
     text-align: left;
     background-color: #fff;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 0 5px var(--box-shadow);
+}
+
+.stock-container p{
+    font-size: 20px;
 }
 
 .nuevo { 
@@ -226,4 +242,78 @@ input[type="text"], input[type="number"] {
 
 .show-more:hover {
     color: var(--hover-color);
+}
+
+/* Accordion efect */
+
+.acordion-container {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px var(--box-shadow);
+}
+
+.accordion {
+    background-color: #f5f5f5;
+    color: #333;
+    cursor: pointer;
+    padding: 15px;
+    width: 100%;
+    border: none;
+    text-align: left;
+    font-size: 16px;
+    font-weight: bold;
+    outline: none;
+    transition: background-color 0.3s ease;
+}
+
+.accordion:hover {
+    background-color: #e2e2e2;
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+  }
+  
+
+
+  .accordion, .accordion-content, .btn{
+    font-size: 18px;
+  }
+
+
+
+  .accordion.active + .accordion-content {
+    max-height: 500px; /* Ajusta según el contenido esperado */
+  }
+  
+
+.accordion-content p, .accordion-content ul{
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.btn-clear {
+    display: block;
+    margin: 10px auto 0;
+    background-color:#007bff;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer; 
+}
+
+.btn-clear:hover {
+    background-color: #0056b3;
+}
+
+
+
+.hidden {
+    display: none;
 }

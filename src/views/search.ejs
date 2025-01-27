@@ -10,7 +10,7 @@
 
 <body>
   <!-- Modal de Confirmación -->
-  <div id="customConfirm" class="modal hidden">
+  <div id="customConfirm" class="modal hidden" aria-hidden="true" role="dialog">
     <div class="modal-content">
       <p id="customConfirmMessage"></p>
       <div class="modal-actions">
@@ -22,36 +22,48 @@
 
   <!-- Contenedor Principal -->
   <div class="container">
-    <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus />
-    <button id="searchButton">Buscar</button>
-    <h1 id="results"></h1>
-    <div id="errorContainer" class="error-message"></div>
-    <div id="successContainer" class="success-container"></div>
+    <!-- Buscador -->
+    <section class="search-section">
+      <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus aria-label="Buscar producto por código" />
+      <button id="searchButton" class="btn-search">Buscar</button>
+    </section>
+
+    <!-- Resultados -->
+    <div id="resultsContainer" class="accordion-container">
+      <button class="accordion">Resultados de la Búsqueda</button>
+      <div class="accordion-content">
+        <p id="productResults"></p>
+      </div>
+    </div>
+    
+    <div id="errorContainer" class="error-message" aria-live="polite"></div>
+    <div id="successContainer" class="success-message" aria-live="polite"></div>
 
     <!-- Stock -->
-    <div id="stockContainer" class="stock-container hidden">
-      <p>
-        <strong class="anterior">Anterior:</strong>
-        <span id="currentStock">0</span>
-      </p>
+    <section id="stockContainer" class="stock-container hidden">
       <p><strong class="nuevo">Nuevo:</strong></p>
       <form id="stockForm">
-        <input type="number" id="newStock" name="newStock" placeholder="Nuevo stock" />
-        <button type="submit">Actualizar Inventario</button>
-        <button type="button" id="cancelButton">Cancelar</button>
+        <input type="number" id="newStock" name="newStock" placeholder="Nuevo stock" aria-label="Ingrese el nuevo stock" />
+        <button type="submit" class="btn-update">Actualizar Inventario</button>
+        <button type="button" id="cancelButton" class="btn-cancel">Cancelar</button>
       </form>
-    </div>
+    </section>
 
-    <!-- Historiall -->
-    <div id="historyContainer" class="history-container">
-      <h2>Historial de Búsqueda</h2>
-      <ul id="historyList"></ul>
-      <button id="clearHistoryButton">Limpiar</button>
-    </div>
+    <!-- Historial -->
+    <section id="historyContainer" class="history-container">
+      <button class="accordion" aria-expanded="false">
+        <h2>Historial de Búsqueda</h2>
+      </button>
+      <div class="accordion-content hidden">
+        <ul id="historyList" aria-live="polite"></ul>
+        <button id="clearHistoryButton" class="btn-clear">Limpiar</button>
+      </div>
+    </section>
   </div>
 
+
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
       const searchInput = document.getElementById("searchInput");
       const searchButton = document.getElementById("searchButton");
       const clearHistoryButton = document.getElementById("clearHistoryButton");
@@ -65,7 +77,7 @@
       loadHistory();
 
       // Buscar producto
-      searchButton.addEventListener("click", searchProduct);
+      searchButton.addEventListener("click", searchProduct());
       searchInput.addEventListener("keypress", (e) => {
         if (e.key === "Enter") searchProduct();
       });
@@ -82,11 +94,11 @@
         if (!productCode) return showError("Por favor, ingrese un código de producto.");
 
         fetch(`/products/api/search?cod=${productCode}&dep=1`, {
-          method: "GET",
-          headers: {
-            Authorization: `Token ${localStorage.getItem("token")}`,
-          },
-        })
+            method: "GET",
+            headers: {
+              Authorization: `Token ${localStorage.getItem("token")}`,
+            },
+          })
           .then((res) => res.json())
           .then((data) => handleSearchResult(data))
           .catch(() => showError("Ocurrió un error al buscar el producto."));
@@ -112,25 +124,63 @@
         if (isNaN(newStock)) return showError("Por favor, ingrese un valor numérico.");
 
         fetch("/products/api/inventory", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({ id: productId, stock: newStock, dep: 1 }),
-        })
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Token ${localStorage.getItem("token")}`,
+            },
+            body: JSON.stringify({
+              id: productId,
+              stock: newStock,
+              dep: 1
+            }),
+          })
           .then((res) => res.json())
           .then((data) => handleStockUpdate(data, newStock))
           .catch(() => showError("Ocurrió un error al actualizar el inventario."));
       }
 
+
+      const accordion = document.querySelectorAll('.accordion');
+      if (accordion.length) {
+      accordion.forEach(item => {
+      item.addEventListener("click", function () {
+      this.classList.toggle("active");
+      const content = this.nextElementSibling;
+      const chevron = this.querySelector('.accordion-icon');
+
+      if (content.style.display === "block") {
+      content.style.display = "none";
+      this.setAttribute("aria-expanded", "false");
+      if (chevron) chevron.style.transform = "rotate(0deg)";
+      } else {
+      content.style.display = "block";
+      this.setAttribute("aria-expanded", "true");
+      if (chevron) chevron.style.transform = "rotate(180deg)";
+      }
+      });
+      });
+      }
+
       function handleStockUpdate(data, newStock) {
         if (data.success) {
-          document.getElementById("currentStock").textContent = newStock;
-          addToHistory(`Stock actualizado: ${newStock}`);
-          showSuccess("Stock actualizado correctamente.");
+          const product = data.data.product;
+          const resultHTML = `
+          <p><strong>Código:</strong> ${product.code}</p>
+          <p><strong>Descripción:</strong> ${product.description}</p>
+          <p><strong>Stock Anterior:</strong> ${product.stock - newStock}</p>
+          <p><strong>Nuevo Stock:</strong> ${product.stock}</p>
+    `;
+          document.getElementById("productResults").innerHTML = resultHTML;
+          document.querySelector(".accordion-content").style.display = "block";
+
+          addToHistory(`Producto: ${product.description}, Código: ${product.code}, Stock Actualizado: ${product.stock}`);
+          showSuccess(data.data.message);
+
         } else {
-          showError("No se pudo actualizar el inventario.");
+
+          showError(data.error || "No se pudo actualizar el inventario.");
+
         }
       }
 
@@ -174,26 +224,25 @@
       }
 
       function displayProduct(product) {
-        const description = product.description;
-        const truncatedDescription = description.length > 20 ? description.slice(0, 20) : description;
+   const resultHTML = `
+   <p><strong>Código:</strong> ${product.code}</p>
+   <p><strong>Descripción:</strong> ${product.description}</p>
+   <p><strong>Stock Actual:</strong> ${product.stock}</p>
+   `;
+   document.getElementById("productResults").innerHTML = resultHTML;
 
-        document.getElementById("results").innerHTML = `
-          <span id="description">${truncatedDescription}</span>
-          ${
-            description.length > 20
-              ? '<a href="#" id="showMore" class="show-more">...</a>'
-              : ""
-          }
-        `;
+   // Mostrar automáticamente el contenido del acordeón
+   const content = document.querySelector(".accordion-content");
+   if (content) {
+   content.style.display = "block";
+   document.querySelector(".accordion").setAttribute("aria-expanded", "true");
+   }
+   }
 
-        if (description.length > 20) {
-          document.getElementById("showMore").addEventListener("click", (e) => {
-            e.preventDefault();
-            document.getElementById("description").textContent = description;
-          });
-        }
-      }
-    });
+   });
+
+
+   
   </script>
 </body>
 
