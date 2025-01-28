@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Inventario</title>
     <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="login-container">
@@ -49,6 +50,7 @@
         .then(data => {
             if (data.success) {
                 localStorage.setItem('token', data.data.token);
+                localStorage.setItem('user', JSON.stringify(data.data.user));
                 window.location.href = '/search';
             } else {
                 errorContainer.textContent = data.error || 'Credenciales inválidas';

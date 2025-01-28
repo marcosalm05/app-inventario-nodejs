@@ -6,11 +6,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Búsqueda de Productos</title>
   <link rel="stylesheet" href="/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
 </head>
 
 <body>
-  <!-- Modal de Confirmación -->
-  <div id="customConfirm" class="modal hidden" aria-hidden="true" role="dialog">
+  <div id="customConfirm" class="modal hidden">
     <div class="modal-content">
       <p id="customConfirmMessage"></p>
       <div class="modal-actions">
@@ -19,79 +20,180 @@
       </div>
     </div>
   </div>
-
-  <!-- Contenedor Principal -->
   <div class="container">
-    <!-- Buscador -->
-    <section class="search-section">
-      <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus aria-label="Buscar producto por código" />
-      <button id="searchButton" class="btn-search">Buscar</button>
-    </section>
+    <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus />
+    <button id="searchButton"><i class="fas fa-search"></i> BUSCAR</button>
+    <h1 id="results"></h1>
+    <div id="errorContainer" class="error-message"></div>
+    <div id="successContainer" class="success-container"></div>
 
-    <!-- Resultados -->
-    <div id="resultsContainer" class="accordion-container">
-      <button class="accordion">Resultados de la Búsqueda</button>
-      <div class="accordion-content">
-        <p id="productResults"></p>
-      </div>
-    </div>
-    
-    <div id="errorContainer" class="error-message" aria-live="polite"></div>
-    <div id="successContainer" class="success-message" aria-live="polite"></div>
-
-    <!-- Stock -->
-    <section id="stockContainer" class="stock-container hidden">
-      <p><strong class="nuevo">Nuevo:</strong></p>
+    <div id="stockContainer" class="stock-container" style="display: none">
+      <!--<h2>Modificar Stock</h2>-->
+      <p>
+        <strong class="anterior">ACTUAL:</strong>
+        <span id="currentStock">0</span>
+      </p>
+      <p><strong class="nuevo">NUEVO:</strong></p>
       <form id="stockForm">
-        <input type="number" id="newStock" name="newStock" placeholder="Nuevo stock" aria-label="Ingrese el nuevo stock" />
-        <button type="submit" class="btn-update">Actualizar Inventario</button>
-        <button type="button" id="cancelButton" class="btn-cancel">Cancelar</button>
+        <input type="number" id="newStock" name="newStock" placeholder="INGRESE CANTIDAD" />
+        <button type="submit"><i class="fa-solid fa-check"></i>ACTUALIZAR INVENTARIO</button>
+        <button type="button" id="cancelButton"><i class="fa-solid fa-xmark"></i>CANCELAR</button>
       </form>
-    </section>
+    </div>
 
-    <!-- Historial -->
-    <section id="historyContainer" class="history-container">
-      <button class="accordion" aria-expanded="false">
-        <h2>Historial de Búsqueda</h2>
-      </button>
-      <div class="accordion-content hidden">
-        <ul id="historyList" aria-live="polite"></ul>
-        <button id="clearHistoryButton" class="btn-clear">Limpiar</button>
-      </div>
-    </section>
+    <div id="historyContainer" class="history-container">
+      <h2>Historial de Búsqueda</h2>
+      <ul id="historyList"></ul>
+      <button id="clearHistoryButton"><i class="fa-regular fa-trash-can"></i>LIMPIAR</button>
+    </div>
   </div>
 
-
   <script>
+   function truncateText(text, maxLength) {
+      if (text.length > maxLength) {
+        return text.slice(0, maxLength);
+      }
+      return text;
+    }
     document.addEventListener("DOMContentLoaded", function() {
       const searchInput = document.getElementById("searchInput");
       const searchButton = document.getElementById("searchButton");
-      const clearHistoryButton = document.getElementById("clearHistoryButton");
+      const clearHistoryButton =
+        document.getElementById("clearHistoryButton");
       const stockForm = document.getElementById("stockForm");
       const cancelButton = document.getElementById("cancelButton");
       const errorContainer = document.getElementById("errorContainer");
       const successContainer = document.getElementById("successContainer");
       const historyList = document.getElementById("historyList");
-      const stockContainer = document.getElementById("stockContainer");
 
       loadHistory();
 
-      // Buscar producto
-      searchButton.addEventListener("click", searchProduct());
-      searchInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") searchProduct();
-      });
+      if (searchInput) {
+        searchInput.addEventListener("input", function() {
+          searchInput.value = searchInput.value.trim();
+        });
+        searchInput.addEventListener("keypress", function(e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const productCode = searchInput.Value;
+            if (!productCode) {
+              errorContainer.textContent =
+                "Por favor, ingrese un código de producto.";
+              showMessages(errorContainer);
+              return;
+            }
+            searchProduct();
+          }
+        });
+      }
 
-      // Actualizar stock
-      stockForm.addEventListener("submit", updateStock);
-      cancelButton.addEventListener("click", resetStockForm);
+      if (searchButton) {
+        searchButton.addEventListener("click", searchProduct);
+      }
 
-      // Historial
-      clearHistoryButton.addEventListener("click", clearHistory);
+      if (clearHistoryButton) {
+        clearHistoryButton.addEventListener("click", async () => {
+          const userConfirmed = await showCustomConfirm(
+            "¿Estás seguro de que deseas limpiar el historial?"
+          );
+
+          if (userConfirmed) {
+            clearHistory();
+            console.log("Historial limpiado");
+          } else {
+            console.log("El usuario canceló la acción");
+          }
+        });
+      }
+
+
+      if (cancelButton) {
+        cancelButton.addEventListener("click", function() {
+          searchInput.value = "";
+          document.getElementById("stockContainer").style.display = "none";
+          document.getElementById("results").textContent = "";
+        });
+      }
+
+      if (stockForm) {
+        stockForm.addEventListener("submit", async function(event) {
+          event.preventDefault();
+          const newStock = parseFloat(document.getElementById("newStock").value);
+          const currentStock = parseFloat(
+            document.getElementById("currentStock").textContent
+          );
+          const productId =
+            document.getElementById("stockContainer").dataset.productId;
+          const description = document.getElementById("results").textContent;
+
+          if (isNaN(newStock)) {
+            errorContainer.textContent = "Por favor, ingrese el nuevo stock.";
+            showMessages(errorContainer);
+            return;
+          }
+
+          if (Number.isInteger(newStock) && newStock.toString().length > 5) {
+            errorContainer.textContent =
+              "El stock no puede superar los cinco dígitos.";
+            showMessages(errorContainer);
+            return;
+          }
+
+          const userConfirmed = await showCustomConfirm(
+            `¿Está seguro de actualizar el stock de ${description}?`
+          );
+
+          if (!userConfirmed) {
+            return;
+          }
+
+          fetch("/products/api/inventory", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Token ${localStorage.getItem("token")}`,
+                User: JSON.parse(localStorage.getItem("user")).username 
+              },
+              body: JSON.stringify({
+                id: productId,
+                stock: newStock,
+                dep: 1
+              }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                document.getElementById("currentStock").textContent =
+                  data.data.product.stock;
+                successContainer.textContent = data.message;
+                showMessages(successContainer);
+
+                const historyItem = `${description} Anterior: ${currentStock} Actual: ${data.data.product.stock}`;
+                addToHistory(historyItem);
+                saveHistory();
+              } else {
+                errorContainer.textContent =
+                  data.error || "Ocurrió un error al actualizar el stock.";
+                showMessages(errorContainer);
+              }
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              errorContainer.textContent =
+                "Ocurrió un error al actualizar el stock.";
+              showMessages(errorContainer);
+            });
+        });
+      }
 
       function searchProduct() {
-        const productCode = searchInput.value.trim();
-        if (!productCode) return showError("Por favor, ingrese un código de producto.");
+        const productCode = document.getElementById("searchInput").value.trim();
+
+        if (!productCode) {
+          errorContainer.textContent = "Por favor, ingrese un código de producto.";
+          showMessages(errorContainer);
+          return;
+        }
 
         fetch(`/products/api/search?cod=${productCode}&dep=1`, {
             method: "GET",
@@ -99,112 +201,135 @@
               Authorization: `Token ${localStorage.getItem("token")}`,
             },
           })
-          .then((res) => res.json())
-          .then((data) => handleSearchResult(data))
-          .catch(() => showError("Ocurrió un error al buscar el producto."));
-      }
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.length > 0) {
+              const product = data[0];
+              truncateAndAddShowMore(product);
 
-      function handleSearchResult(data) {
-        if (data.length > 0) {
-          const product = data[0];
-          displayProduct(product);
-          stockContainer.dataset.productId = product.id;
-          stockContainer.classList.remove("hidden");
-        } else {
-          showError("No se encontraron productos con ese código.");
-          stockContainer.classList.add("hidden");
-        }
-      }
-
-      function updateStock(event) {
-        event.preventDefault();
-        const newStock = parseInt(document.getElementById("newStock").value, 10);
-        const productId = stockContainer.dataset.productId;
-
-        if (isNaN(newStock)) return showError("Por favor, ingrese un valor numérico.");
-
-        fetch("/products/api/inventory", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Token ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({
-              id: productId,
-              stock: newStock,
-              dep: 1
-            }),
+              document.getElementById("currentStock").textContent = product.stock;
+              document.getElementById("stockContainer").style.display = "block";
+              document.getElementById("stockContainer").dataset.productId = product.id;
+            } else {
+              errorContainer.textContent = "No se encontraron productos.";
+              showMessages(errorContainer);
+              document.getElementById("stockContainer").style.display = "none";
+            }
           })
-          .then((res) => res.json())
-          .then((data) => handleStockUpdate(data, newStock))
-          .catch(() => showError("Ocurrió un error al actualizar el inventario."));
+          .catch((error) => {
+            console.error("Error:", error);
+            errorContainer.textContent = "Ocurrió un error durante la búsqueda.";
+            showMessages(errorContainer);
+          });
       }
 
 
-      const accordion = document.querySelectorAll('.accordion');
-      if (accordion.length) {
-      accordion.forEach(item => {
-      item.addEventListener("click", function () {
-      this.classList.toggle("active");
-      const content = this.nextElementSibling;
-      const chevron = this.querySelector('.accordion-icon');
 
-      if (content.style.display === "block") {
-      content.style.display = "none";
-      this.setAttribute("aria-expanded", "false");
-      if (chevron) chevron.style.transform = "rotate(0deg)";
-      } else {
-      content.style.display = "block";
-      this.setAttribute("aria-expanded", "true");
-      if (chevron) chevron.style.transform = "rotate(180deg)";
-      }
-      });
-      });
-      }
+      function truncateAndAddShowMore(product) {
+      const maxDescriptionLength = 20;
+      const truncatedDescription = truncateText(product.description, maxDescriptionLength);
 
-      function handleStockUpdate(data, newStock) {
-        if (data.success) {
-          const product = data.data.product;
-          const resultHTML = `
-          <p><strong>Código:</strong> ${product.code}</p>
-          <p><strong>Descripción:</strong> ${product.description}</p>
-          <p><strong>Stock Anterior:</strong> ${product.stock - newStock}</p>
-          <p><strong>Nuevo Stock:</strong> ${product.stock}</p>
+      document.getElementById("results").innerHTML = `
+      <span id="description">${truncatedDescription}</span>
+      ${
+        product.description.length > maxDescriptionLength
+          ? '<a href="#" id="showMore" class="show-more">...</a>'
+          : ""
+      }
     `;
-          document.getElementById("productResults").innerHTML = resultHTML;
-          document.querySelector(".accordion-content").style.display = "block";
 
-          addToHistory(`Producto: ${product.description}, Código: ${product.code}, Stock Actualizado: ${product.stock}`);
-          showSuccess(data.data.message);
+      if (product.description.length > maxDescriptionLength) {
+        document.getElementById("showMore").addEventListener("click", function(e) {
+          e.preventDefault();
+          document.getElementById("description").textContent = product.description;
+          this.style.display = "none";
+        });
+      }
+    }
+      function showCustomConfirm(message) {
+        return new Promise((resolve, reject) => {
+          // Selecciona los elementos del modal
+          const customConfirm = document.getElementById("customConfirm");
+          const customConfirmMessage = document.getElementById(
+            "customConfirmMessage"
+          );
+          const confirmYes = document.getElementById("confirmYes");
+          const confirmNo = document.getElementById("confirmNo");
 
-        } else {
+          // Configura el mensaje
+          customConfirmMessage.textContent = message;
 
-          showError(data.error || "No se pudo actualizar el inventario.");
 
+          // Muestra el modal
+          customConfirm.classList.remove("hidden");
+          customConfirm.classList.add("fade-in");
+
+          // Maneja el clic en "Sí"
+          confirmYes.onclick = () => {
+            customConfirm.classList.add("hidden");
+            resolve(true); // Resuelve la promesa con "true"
+          };
+
+          // Maneja el clic en "No"
+          confirmNo.onclick = () => {
+            customConfirm.classList.add("hidden");
+            resolve(false); // Resuelve la promesa con "false"
+          };
+
+          // Cierra el modal al hacer clic fuera del contenido
+          customConfirm.addEventListener(
+            "click",
+            (e) => {
+              if (e.target === customConfirm) {
+                customConfirm.classList.add("hidden");
+                resolve(false);
+              }
+            }, {
+              once: true
+            }
+          );
+          customConfirm.addEventListener("transitionend", () => {
+            customConfirm.classList.remove("fade-in");
+          }, {
+            once: true
+          });
+        });
+      }
+
+      // Función para truncar texto (movida fuera de searchProduct para reutilización)
+      function truncateAndAddShowMore(product) {
+        const maxDescriptionLength = 20;
+        const truncatedDescription = truncateText(product.description, maxDescriptionLength);
+
+        document.getElementById("results").innerHTML = `
+    <span id="description">${truncatedDescription}</span>
+    ${
+      product.description.length > maxDescriptionLength
+        ? '<a href="#" id="showMore" class="show-more">...</a>'
+        : ""
+    }
+  `;
+
+        if (product.description.length > maxDescriptionLength) {
+          document.getElementById("showMore").addEventListener("click", function(e) {
+            e.preventDefault();
+            document.getElementById("description").textContent = product.description;
+            this.style.display = "none";
+          });
         }
       }
 
-      function showError(message) {
-        errorContainer.textContent = message;
-        errorContainer.style.display = "block";
-        setTimeout(() => (errorContainer.style.display = "none"), 3000);
-      }
-
-      function showSuccess(message) {
-        successContainer.textContent = message;
-        successContainer.style.display = "block";
-        setTimeout(() => (successContainer.style.display = "none"), 3000);
-      }
 
       function addToHistory(item) {
         const li = document.createElement("li");
         li.textContent = item;
         historyList.appendChild(li);
-        saveHistory();
       }
 
       function saveHistory() {
-        const items = Array.from(historyList.children).map((li) => li.textContent);
+        const items = Array.from(historyList.children).map(
+          (li) => li.textContent
+        );
         localStorage.setItem("history", JSON.stringify(items));
       }
 
@@ -215,34 +340,16 @@
 
       function clearHistory() {
         historyList.innerHTML = "";
-        saveHistory();
+        localStorage.removeItem("history");
       }
 
-      function resetStockForm() {
-        stockForm.reset();
-        stockContainer.classList.add("hidden");
+      function showMessages(container) {
+        container.style.display = "block";
+        setTimeout(() => {
+          container.style.display = "none";
+        }, 5000);
       }
-
-      function displayProduct(product) {
-   const resultHTML = `
-   <p><strong>Código:</strong> ${product.code}</p>
-   <p><strong>Descripción:</strong> ${product.description}</p>
-   <p><strong>Stock Actual:</strong> ${product.stock}</p>
-   `;
-   document.getElementById("productResults").innerHTML = resultHTML;
-
-   // Mostrar automáticamente el contenido del acordeón
-   const content = document.querySelector(".accordion-content");
-   if (content) {
-   content.style.display = "block";
-   document.querySelector(".accordion").setAttribute("aria-expanded", "true");
-   }
-   }
-
-   });
-
-
-   
+    });
   </script>
 </body>
 
