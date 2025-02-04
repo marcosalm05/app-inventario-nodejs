@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 </head>
 
 <body>
@@ -21,181 +22,140 @@
     </div>
   </div>
   <div class="container">
-    <input type="text" id="searchInput" name="searchInput" placeholder="Ingrese el código del producto" autofocus />
-    <button id="searchButton"><i class="fas fa-search"></i> BUSCAR</button>
+    <input type="text" id="searchInput" class="product-search" name="searchInput" placeholder="Ingrese el código del producto" autofocus />
+    <button id="scanBarcodeButton"><i class="fas fa-barcode"></i> ESCANEAR CÓDIGO DE BARRAS</button>
+    <div id="interactive" class="viewport"></div>
     <h1 id="results"></h1>
     <div id="errorContainer" class="error-message"></div>
     <div id="successContainer" class="success-container"></div>
 
     <div id="stockContainer" class="stock-container" style="display: none">
       <!--<h2>Modificar Stock</h2>-->
-      <p>
-        <strong class="anterior">ACTUAL:</strong>
-        <span id="currentStock">0</span>
-      </p>
-      <p><strong class="nuevo">NUEVO:</strong></p>
+      <div class="input-container">
+        <div class="anterior-stock">
+          <label for="currentStock" class="anterior">ACTUAL</label>
+          <input type="text" id="currentStock" value="0" readonly />
+        </div>
+        <div class="nuevo-stock">
+          <label class="nuevo">NUEVO</label>
+          <input type="text" id="newStock" name="newStock" />
+        </div>
+      </div>
+      <h3 id="stockResult"></h3>
       <form id="stockForm">
-        <input type="number" id="newStock" name="newStock" placeholder="INGRESE CANTIDAD" />
         <button type="submit"><i class="fa-solid fa-check"></i>ACTUALIZAR INVENTARIO</button>
-        <button type="button" id="cancelButton"><i class="fa-solid fa-xmark"></i>CANCELAR</button>
+        <button type="button" id="cancelButton" class="btn-cancel"><i class="fa-solid fa-xmark"></i>CANCELAR</button>
       </form>
     </div>
-
     <div id="historyContainer" class="history-container">
-      <h2>Historial de Búsqueda</h2>
-      <ul id="historyList"></ul>
-      <button id="clearHistoryButton"><i class="fa-regular fa-trash-can"></i>LIMPIAR</button>
+      <h2 id="historyToggle" class="accordion">
+        Historial de Búsqueda<i class="fa-solid fa-chevron-down"></i>
+      </h2>
+
+      <div id="historyContent" class="accordion-content">
+        <ul id="historyList"></ul>
+        <button id="clearHistoryButton">
+          <i class="fa-regular fa-trash-can"></i> LIMPIAR
+        </button>
+      </div>
+
     </div>
   </div>
 
+
   <script>
-   function truncateText(text, maxLength) {
-      if (text.length > maxLength) {
-        return text.slice(0, maxLength);
-      }
-      return text;
-    }
+
     document.addEventListener("DOMContentLoaded", function() {
+      
       const searchInput = document.getElementById("searchInput");
       const searchButton = document.getElementById("searchButton");
-      const clearHistoryButton =
-        document.getElementById("clearHistoryButton");
+      const clearHistoryButton = document.getElementById("clearHistoryButton");
       const stockForm = document.getElementById("stockForm");
       const cancelButton = document.getElementById("cancelButton");
       const errorContainer = document.getElementById("errorContainer");
       const successContainer = document.getElementById("successContainer");
       const historyList = document.getElementById("historyList");
+      const newStockInput = document.getElementById("newStock");
+      const customConfirm = document.getElementById("customConfirm");
+      const confirmYes = document.getElementById("confirmYes");
+      const confirmNo = document.getElementById("confirmNo");
 
       loadHistory();
 
-      if (searchInput) {
-        searchInput.addEventListener("input", function() {
-          searchInput.value = searchInput.value.trim();
-        });
-        searchInput.addEventListener("keypress", function(e) {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            const productCode = searchInput.Value;
-            if (!productCode) {
-              errorContainer.textContent =
-                "Por favor, ingrese un código de producto.";
-              showMessages(errorContainer);
-              return;
-            }
-            searchProduct();
-          }
-        });
+      // Evento para cambiar el texto y color de "NUEVO" dinámicamente
+      newStockInput.addEventListener("input", formatStockInput);
+
+      // Evento Enter para el input newStock
+      newStockInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          stockForm.submit();
+        }
+      });
+
+      // Eventos ArrowDown y ArrowUp para las opciones "Sí" y "No" del modal de confirmación
+      document.addEventListener("keydown", handleArrowKeys);
+
+      // Debounce function to limit the rate of search requests
+      function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
       }
 
-      if (searchButton) {
-        searchButton.addEventListener("click", searchProduct);
-      }
+      // Evento input para la búsqueda en tiempo real
+      searchInput.addEventListener("input", debounce(searchProduct, 500));
 
-      if (clearHistoryButton) {
-        clearHistoryButton.addEventListener("click", async () => {
-          const userConfirmed = await showCustomConfirm(
-            "¿Estás seguro de que deseas limpiar el historial?"
-          );
+      function startBarcodeScanner() {
+      const interactiveDiv = document.getElementById('interactive');
+      interactiveDiv.style.display = 'block';
 
-          if (userConfirmed) {
-            clearHistory();
-            console.log("Historial limpiado");
-          } else {
-            console.log("El usuario canceló la acción");
-          }
-        });
-      }
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector('#interactive'),
+          constraints: {
+            facingMode: "environment"
+          },
+        },
+        decoder: {
+          readers: ["ean_reader", "code_128_reader"]
+        }
+      }, function (err) {
+        if (err) {
+          console.error("Error al inicializar QuaggaJS:", err);
+          errorContainer.textContent = "No se pudo inicializar el escáner de códigos de barras.";
+          return;
+        }
+        Quagga.start();
+      });
 
+      Quagga.onDetected(function (result) {
+        const barcodeValue = result.codeResult.code;
+        Quagga.stop();
+        interactiveDiv.style.display = 'none';
+        searchInput.value = barcodeValue;
+        searchProduct();
+      });
+    }
 
-      if (cancelButton) {
-        cancelButton.addEventListener("click", function() {
-          searchInput.value = "";
-          document.getElementById("stockContainer").style.display = "none";
-          document.getElementById("results").textContent = "";
-        });
-      }
+    document.getElementById('scanBarcodeButton').addEventListener('click', startBarcodeScanner);
+      
 
-      if (stockForm) {
-        stockForm.addEventListener("submit", async function(event) {
-          event.preventDefault();
-          const newStock = parseFloat(document.getElementById("newStock").value);
-          const currentStock = parseFloat(
-            document.getElementById("currentStock").textContent
-          );
-          const productId =
-            document.getElementById("stockContainer").dataset.productId;
-          const description = document.getElementById("results").textContent;
-
-          if (isNaN(newStock)) {
-            errorContainer.textContent = "Por favor, ingrese el nuevo stock.";
-            showMessages(errorContainer);
-            return;
-          }
-
-          if (Number.isInteger(newStock) && newStock.toString().length > 5) {
-            errorContainer.textContent =
-              "El stock no puede superar los cinco dígitos.";
-            showMessages(errorContainer);
-            return;
-          }
-
-          const userConfirmed = await showCustomConfirm(
-            `¿Está seguro de actualizar el stock de ${description}?`
-          );
-
-          if (!userConfirmed) {
-            return;
-          }
-
-          fetch("/products/api/inventory", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Token ${localStorage.getItem("token")}`,
-                User: JSON.parse(localStorage.getItem("user")).username 
-              },
-              body: JSON.stringify({
-                id: productId,
-                stock: newStock,
-                dep: 1
-              }),
-            })
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.success) {
-                document.getElementById("currentStock").textContent =
-                  data.data.product.stock;
-                successContainer.textContent = data.message;
-                showMessages(successContainer);
-
-                const historyItem = `${description} Anterior: ${currentStock} Actual: ${data.data.product.stock}`;
-                addToHistory(historyItem);
-                saveHistory();
-              } else {
-                errorContainer.textContent =
-                  data.error || "Ocurrió un error al actualizar el stock.";
-                showMessages(errorContainer);
-              }
-            })
-            .catch((error) => {
-              console.error("Error:", error);
-              errorContainer.textContent =
-                "Ocurrió un error al actualizar el stock.";
-              showMessages(errorContainer);
-            });
-        });
-      }
 
       function searchProduct() {
-        const productCode = document.getElementById("searchInput").value.trim();
+        const searchValue = searchInput.value.trim();
 
-        if (!productCode) {
+        if (!searchValue) {
           errorContainer.textContent = "Por favor, ingrese un código de producto.";
           showMessages(errorContainer);
           return;
         }
 
-        fetch(`/products/api/search?cod=${productCode}&dep=1`, {
+        fetch(`/products/api/search?cod=${searchValue}&dep=1`, {
             method: "GET",
             headers: {
               Authorization: `Token ${localStorage.getItem("token")}`,
@@ -207,9 +167,15 @@
               const product = data[0];
               truncateAndAddShowMore(product);
 
-              document.getElementById("currentStock").textContent = product.stock;
+              // ✅ Formatear y mostrar stock actual
+              document.getElementById("currentStock").value = formatNumber(product.stock || 0);
               document.getElementById("stockContainer").style.display = "block";
               document.getElementById("stockContainer").dataset.productId = product.id;
+
+              // ⏩ Enfocar el input para ingresar nuevo stock
+              setTimeout(() => {
+                document.getElementById("newStock").focus();
+              }, 300);
             } else {
               errorContainer.textContent = "No se encontraron productos.";
               showMessages(errorContainer);
@@ -223,44 +189,141 @@
           });
       }
 
+      // Actualizar inventario y limpiar el input newStock
+      stockForm.addEventListener("submit", async function(e) {
+        e.preventDefault();
 
+        const newStockValue = parseNumber(newStockInput.value);
+        const currentStockValue = parseNumber(document.getElementById("currentStock").value);
+        const productId = document.getElementById("stockContainer").dataset.productId;
+        const productName = document.getElementById("results").textContent;
+
+        if (isNaN(newStockValue)) {
+          errorContainer.textContent = "Por favor, ingrese el nuevo stock.";
+          showMessages(errorContainer);
+          return;
+        }
+
+        if (Number.isInteger(newStockValue) && newStockValue.toString().length > 5) {
+          errorContainer.textContent = "Atención, el stock supera los cinco dígitos.";
+          showMessages(errorContainer);
+          return;
+        }
+
+        const confirmMessage = `¿Está seguro de actualizar el stock de ${productName}?<br><br>
+          <b class="ant">Anterior:</b> ${formatNumber(currentStockValue)}<br>
+          <b class="nue">Nuevo:</b> ${formatNumber(currentStockValue + newStockValue)}`;
+
+        if (!(await showCustomConfirm(confirmMessage))) {
+          return;
+        }
+
+        fetch("/products/api/inventory", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Token ${localStorage.getItem("token")}`,
+              User: JSON.parse(localStorage.getItem("user")).username
+            },
+            body: JSON.stringify({
+              id: productId,
+              stock: newStockValue,
+              dep: 1
+            }),
+          })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              // ✅ Actualizar el stock con formato
+              document.getElementById("currentStock").value = formatNumber(data.data.product.stock);
+              showMessages(successContainer, data.message);
+              // ✅ Agregar al historial
+              addToHistory({
+                code: data.data.product.code,
+                name: productName,
+                previous: currentStockValue,
+                current: data.data.product.stock,
+                //date: new Date().toLocaleString()
+              })
+              saveHistory();
+
+              // Limpiar el input newStock y ocultar el componente de modificar stock
+              newStockInput.value = "";
+              document.getElementById("stockContainer").style.display = "none";
+              document.getElementById("results").style.display = "none";
+              searchInput.value = "";
+              setTimeout(() => {
+                searchInput.focus();
+              }, 300);
+            } else {
+              showMessages(errorContainer, data.error || "Ocurrió un error al actualizar el stock.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            errorContainer.textContent = "Ocurrió un error al actualizar el stock.";
+            showMessages(errorContainer);
+          });
+      });
+
+      // Función para cancelar la modificación de stock
+      cancelButton.addEventListener("click", function() {
+        searchInput.value = "";
+        document.getElementById("stockContainer").style.display = "none";
+        document.getElementById("results").textContent = "";
+        setTimeout(() => {
+          searchInput.focus();
+        }, 300);
+      });
+
+      // Función para limpiar el historial
+      clearHistoryButton.addEventListener("click", async () => {
+        const userConfirmed = await showCustomConfirm("¿Estás seguro de que deseas limpiar el historial?");
+
+        if (userConfirmed) {
+          clearHistory();
+          console.log("Historial limpiado");
+        } else {
+          console.log("El usuario canceló la acción");
+        }
+      });
+
+      function truncateText(text, maxLength) {
+        return text.length > maxLength ? text.slice(0, maxLength) : text;
+      }
 
       function truncateAndAddShowMore(product) {
-      const maxDescriptionLength = 20;
-      const truncatedDescription = truncateText(product.description, maxDescriptionLength);
+        const maxDescriptionLength = 20;
+        const truncatedDescription = truncateText(product.description, maxDescriptionLength);
 
-      document.getElementById("results").innerHTML = `
-      <span id="description">${truncatedDescription}</span>
-      ${
-        product.description.length > maxDescriptionLength
-          ? '<a href="#" id="showMore" class="show-more">...</a>'
-          : ""
-      }
-    `;
+        document.getElementById("results").innerHTML = `
+          <span id="description" class="truncated">${truncatedDescription}</span>
+          ${product.description.length > maxDescriptionLength ? '<a href="#" id="showMore" class="show-more">...</a>' : ""}
+        `;
 
-      if (product.description.length > maxDescriptionLength) {
-        document.getElementById("showMore").addEventListener("click", function(e) {
-          e.preventDefault();
-          document.getElementById("description").textContent = product.description;
-          this.style.display = "none";
-        });
+        if (product.description.length > maxDescriptionLength) {
+          const descriptionElement = document.getElementById("description");
+          const showMoreElement = document.getElementById("showMore");
+
+          descriptionElement.addEventListener("click", function() {
+            descriptionElement.textContent = product.description;
+            showMoreElement.style.display = "none";
+          });
+
+          showMoreElement.addEventListener("click", function(e) {
+            e.preventDefault();
+            descriptionElement.textContent = product.description;
+            showMoreElement.style.display = "none";
+          });
+        }
       }
-    }
+
       function showCustomConfirm(message) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           // Selecciona los elementos del modal
           const customConfirm = document.getElementById("customConfirm");
-          const customConfirmMessage = document.getElementById(
-            "customConfirmMessage"
-          );
-          const confirmYes = document.getElementById("confirmYes");
-          const confirmNo = document.getElementById("confirmNo");
-
           // Configura el mensaje
-          customConfirmMessage.textContent = message;
-
-
-          // Muestra el modal
+          customConfirmMessage.innerHTML = message;
           customConfirm.classList.remove("hidden");
           customConfirm.classList.add("fade-in");
 
@@ -277,17 +340,15 @@
           };
 
           // Cierra el modal al hacer clic fuera del contenido
-          customConfirm.addEventListener(
-            "click",
-            (e) => {
-              if (e.target === customConfirm) {
-                customConfirm.classList.add("hidden");
-                resolve(false);
-              }
-            }, {
-              once: true
+          customConfirm.addEventListener("click", (e) => {
+            if (e.target === customConfirm) {
+              customConfirm.classList.add("hidden");
+              resolve(false);
             }
-          );
+          }, {
+            once: true
+          });
+
           customConfirm.addEventListener("transitionend", () => {
             customConfirm.classList.remove("fade-in");
           }, {
@@ -296,40 +357,114 @@
         });
       }
 
-      // Función para truncar texto (movida fuera de searchProduct para reutilización)
-      function truncateAndAddShowMore(product) {
-        const maxDescriptionLength = 20;
-        const truncatedDescription = truncateText(product.description, maxDescriptionLength);
+      document.getElementById("historyToggle").addEventListener("click", function() {
+        const historyContent = document.getElementById("historyContent");
+        const icon = this.querySelector("i");
+        historyContent.classList.toggle("open");
+        icon.classList.toggle("rotate");
+      });
 
-        document.getElementById("results").innerHTML = `
-    <span id="description">${truncatedDescription}</span>
-    ${
-      product.description.length > maxDescriptionLength
-        ? '<a href="#" id="showMore" class="show-more">...</a>'
-        : ""
-    }
-  `;
+      // Funciones de formateo de números
+      function formatNumber(value) {
+        return new Intl.NumberFormat("es-ES", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(value);
+      }
 
-        if (product.description.length > maxDescriptionLength) {
-          document.getElementById("showMore").addEventListener("click", function(e) {
-            e.preventDefault();
-            document.getElementById("description").textContent = product.description;
-            this.style.display = "none";
-          });
+      // Función para convertir un string formateado en número (para cálculos)
+      function parseNumber(value) {
+        return parseFloat(value.replace(/\./g, '').replace(',', '.'));
+      }
+
+      function formatStockInput() {
+        const newStockInput = document.getElementById("newStock");
+        const newStockValue = parseNumber(newStockInput.value);
+        const currentStockValue = parseNumber(document.getElementById("currentStock").value);
+        const label = document.querySelector(".nuevo");
+        if (newStockValue > 0) {
+          label.textContent = "AUMENTAR STOCK";
+          label.style.color = "green";
+
+        } else if (newStockValue < 0) {
+          label.textContent = "DISMINUIR STOCK";
+          label.style.color = "orange";
+        } else {
+          label.textContent = "NUEVO";
+          label.style.color = "blue";
+          newStockInput.style.color = "black";
+        }
+        if (newStockValue + currentStockValue < 0) {
+          newStockInput.style.color = "red";
+        }
+        
+  // Mostrar resultado de la operación newStockValue + currentStockValue en un contenedor en tiempo real
+  const stockResult = document.getElementById("stockResult");
+  const finalStock = newStockValue + currentStockValue;
+
+  if (isNaN(finalStock)) {
+    stockResult.style.display = "none";
+  } else {
+    stockResult.style.display = "block";
+    stockResult.textContent = `Stock final: ${formatNumber(finalStock)}`;
+  }
+
+  // No permitir que el usuario ingrese un stock mayor a 99999
+  if (newStockValue > 99999) {
+    newStockInput.value = 99999;
+  }
+
+  // No permitir que el usuario ingrese un stock menor a -99999
+  if (newStockValue < -99999) {
+    newStockInput.value = -99999;
+  }
+
+  // No permitir que el usuario ingrese un stock con más de dos decimales
+  if (newStockValue.toString().split(".")[1]?.length > 2) {
+    newStockInput.value = parseFloat(newStockValue.toFixed(2));
+  }
+
+  // Solo admitir "-", "," y números
+  newStockInput.value = newStockInput.value.replace(/(?!^-)[^\d,]/g, "").replace(/,/g, ".");  
+      }
+
+      function handleArrowKeys(e) {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (document.activeElement === confirmYes) {
+            confirmNo.focus();
+          } else {
+            confirmYes.focus();
+          }
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (document.activeElement === confirmYes) {
+            confirmYes.click();
+          } else if (document.activeElement === confirmNo) {
+            confirmNo.click();
+          }
         }
       }
 
-
-      function addToHistory(item) {
+      // Función relacionadas al historial
+      function addToHistory({
+        code,
+        name,
+        previous,
+        current
+      }) {
         const li = document.createElement("li");
-        li.textContent = item;
-        historyList.appendChild(li);
+        li.innerHTML = `
+      <b>Código:</b> ${code}
+      <i class="fa-regular fa-copy copy-icon" data-code="${code}"></i><br>
+      <b>${name}</b><br>
+      <span><p class="ant">Anterior:</p> ${formatNumber(previous)} <p class="nue">Actual:</p> ${formatNumber(current)}</span>
+    `;
+        historyList.prepend(li);
       }
 
       function saveHistory() {
-        const items = Array.from(historyList.children).map(
-          (li) => li.textContent
-        );
+        const items = Array.from(historyList.children).map((li) => li.innerHTML);
         localStorage.setItem("history", JSON.stringify(items));
       }
 

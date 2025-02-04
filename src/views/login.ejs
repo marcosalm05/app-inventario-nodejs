@@ -1,70 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Inventario</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Inventario</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;400;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
-    <div class="login-container">
-        <img src="iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo del sistema Siscotic" class="login-icon">
-        <form id="loginForm" action="/auth/api/login" method="POST">
-            <div class="form-group">
-                <label for="username">USUARIO:</label>
-                <input type="text" id="username" class="input-username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">CONTRASEÑA:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit">INICIAR SESIÓN</button>
-            <div id="errorContainer" class="error-message"></div>
-        </form>
-    </div>
+  <div class="login-container">
+    <img src="iconos/Logo-PNG-SISCOTIC-150X150.png" alt="Logo del sistema Siscotic" class="login-icon">
+    <form id="loginForm" action="/auth/api/login" method="POST">
+      <div class="form-group">
+        <label for="username">USUARIO:</label>
+        <input type="text" id="username" class="input-username" name="username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">CONTRASEÑA:</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button type="submit">INICIAR SESIÓN</button>
+      <div id="errorContainer" class="error-message"></div>
+    </form>
+  </div>
 
-    <script>
-     document.getElementById('loginForm').addEventListener('submit', function (event) {
-    event.preventDefault();
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+      event.preventDefault();
 
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    const errorContainer = document.getElementById('errorContainer');
-    const submitButton = document.querySelector('button[type="submit"]');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorContainer = document.getElementById('errorContainer');
+      const submitButton = document.querySelector('button[type="submit"]');
 
 
 
-    // Mostrar indicador de carga
-    submitButton.disabled = true;
-    submitButton.textContent = 'Iniciando sesión...';
+      // Mostrar indicador de carga
+      submitButton.disabled = true;
+      submitButton.textContent = 'INICIANDO SESIÓN...';
 
-    fetch('/auth/api/login', {
-        method: 'POST',
-        headers: {
+      fetch('/auth/api/login', {
+          method: 'POST',
+          headers: {
             'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-    })
+          },
+          body: JSON.stringify({
+            username,
+            password
+          })
+        })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                localStorage.setItem('token', data.data.token);
-                localStorage.setItem('user', JSON.stringify(data.data.user));
-                window.location.href = '/search';
-            } else {
-                errorContainer.textContent = data.error || 'Credenciales inválidas';
-            }
+          if (data.success) {
+            localStorage.setItem('token', data.data.token);
+            localStorage.setItem('user', JSON.stringify(data.data.user));
+            window.location.href = '/search';
+          } else {
+            errorContainer.textContent = data.error || 'Credenciales inválidas';
+          }
         })
         .catch(error => {
-            console.error('Error:', error);
-            errorContainer.textContent = 'Ocurrió un error durante el inicio de sesión';
+          console.error('Error:', error);
+          errorContainer.textContent = 'Ocurrió un error durante el inicio de sesión';
         })
         .finally(() => {
-            submitButton.disabled = false;
-            submitButton.textContent = 'INICIAR SESIÓN';
+          submitButton.disabled = false;
+          submitButton.textContent = 'INICIAR SESIÓN';
         });
-});
-    </script>
+    });
+  </script>
 </body>
+
 </html>

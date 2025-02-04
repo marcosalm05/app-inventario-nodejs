@@ -79,7 +79,6 @@ class Product {
             FROM productos LEFT JOIN depstock ON pro_codigo = sto_procodigo
             WHERE 
                 pro_codori ILIKE $1 OR pro_detalle ILIKE $1
-                AND sto_borrado = 0 AND sto_deposito = $2
             GROUP BY pro_codigo, pro_codori, pro_detalle 
         `;
         const values = [`%${term}%`, deposito];

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Aplicación de inicio de sesión y búsqueda de productos con Node.js y PostgreSQL",
   "main": "src/app.js",
+  "bin": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js"
@@ -17,6 +18,7 @@
     "passport": "^0.4.1",
     "passport-local": "^1.0.0",
     "pg": "^8.13.1",
+    "quagga": "^0.12.1",
     "uuid": "^11.0.5"
   },
   "devDependencies": {
@@ -30,5 +32,11 @@
     "search"
   ],
   "author": "Tu Nombre",
-  "license": "MIT"
+  "license": "MIT",
+  "pkg": {
+    "assets": [
+      "src/views/**/*",
+      "src/public/**/*"
+    ]
+  }
 }

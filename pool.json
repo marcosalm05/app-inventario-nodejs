@@ -1,0 +1,22 @@
+[
+
+    {
+        "host": "localhost",
+        "base": "VIRGENLUJAN",
+        "puerto": "5432",
+        "nombre": "slm"
+    },
+    {
+        "host": "192.168.88.13",
+        "base": "slm",
+        "puerto": "5432",
+        "nombre": "slm"
+    },
+    {
+        "host": "XX",
+        "base": "BULONES",
+        "puerto": "5432",
+        "nombre": "BULONES"
+    }
+
+]

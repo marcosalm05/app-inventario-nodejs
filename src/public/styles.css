@@ -10,9 +10,11 @@
 }*/
 
 :root {
-    --primary-color: 000;
-    --secondary-color: #fff;
-    --hover-color:  #333;
+    --contrast-color:#007bff;
+    --primary-color: #000;
+    --secondary-color:  #333;
+    --terciary-color: #666;
+    --hover-color:  #525252;
     --success-color:  #4caf50;
     --error-color: #f44336;
     --text-light: #fff;
@@ -23,6 +25,7 @@
 /* === General Styles === */
 body {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 100vh;
@@ -42,7 +45,7 @@ body {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 0 10px var(--box-shadow);
+    box-shadow: var(--box-shadow);
     width: 300px;
     text-align: center;
 }
@@ -55,6 +58,12 @@ body {
     width: 50px;
     height: 50px;
     margin-bottom: 20px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .form-group {
@@ -82,15 +91,18 @@ p{
 
 /* === Buttons === */
 button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
     width: 100%;
     padding: 10px;
-    background-color: var(--secondary-color);
+    background-color: var(--primary-color);
     color: var(--text-light);
     border: none;
     border-radius: 8px;
-    cursor: pointer;
-    margin-bottom: 10px;
-    transition:  background-color 0.3s ease, transform 0.2s ease; 
+    transition:  background-color 0.3s ease; 
+    font: bold;
 }
 
 button:hover {
@@ -104,22 +116,21 @@ button:active {
 
 /*Search Section*/
 .container {
-    background-color: #bce0ee;
+    background-color: #fff;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 0 10px var(--box-shadow);
+    box-shadow: var(--box-shadow);
     width: 400px;
     text-align: center;
-    margin-top: 50px;
 }
 
-.container h1 {
+h1 {
     margin-bottom: 20px;
     color: var(--primary-color);
 }
 
 
-input[type="text"], input[type="number"] {
+.product-search {
     width: calc(100% - 20px);
     padding: 10px;
     margin-bottom: 10px;
@@ -139,13 +150,23 @@ input[type="text"], input[type="number"] {
     margin-top: 10px;
 }
 
+#interactive {
+    width: 100%;
+    max-width: 600px;
+    height: 300px;
+    margin: 20px auto;
+    border: 2px solid #ccc;
+    display: none;
+  }
+
+
 /* === Stock and History Container ===*/
 .stock-container{
     border: 2px solid transparent;
     background-color: var(--bg-light);
     border-radius: 8px;
     padding: 15px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--box-shadow);
 }
 .stock-container, .history-container {
     margin-top: 20px;
@@ -159,16 +180,65 @@ input[type="text"], input[type="number"] {
 
 .stock-container p{
     font-size: 20px;
+    margin-bottom: 10px;
 }
 
-.nuevo { 
-    color:  var(--primary-color);
+.input-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+ }
+
+ .anterior-stock, .nuevo-stock {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+ }
+
+ .anterior-stock label, .nuevo-stock label {
+    font-weight: bold;
+    margin-bottom: 5px;
+ }
+
+ .anterior-stock input, .nuevo-stock input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    text-align: center;
+    font-size: 16px;
+    box-sizing: border-box;
+ }
+ .anterior-stock input {
+    background-color: #f1f1f1;
+    color: gray;
 }
 
-.anterior { 
-    color: gray; 
+.anterior-stock label, .ant {
+    color: #666;
 }
 
+.nuevo-stock label, .nue {
+    color: #305dc5;
+}
+
+.btn-cancel {
+    background-color: var(--bg-light);
+    color: var(--secondary-color);
+    border: #666 1px solid;
+}
+.btn-cancel:hover{
+    background-color: #f1f1f1;
+}
+
+.history-container{
+    background-color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: var(--box-shadow);
+    margin-top: 20px;
+}
 
 .history-container ul{
     list-style-type: none;
@@ -195,39 +265,36 @@ input[type="text"], input[type="number"] {
     justify-content: center;
     z-index: 1000;
   }
-  
-  .modal.hidden {
-    display: none;
-  }
-  
+
   .modal-content {
     background: #fff;
     padding: 20px;
     border-radius: 5px;
     text-align: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow:var(--box-shadow);
   }
   
   .modal-actions {
     margin-top: 15px;
   }
   
+  .hidden {
+    display: none;
+  }
+  
   .btn {
     padding: 10px 15px;
     margin: 5px;
+    border-radius: 4px;
     cursor: pointer;
-  }
+    font-weight: bold;
+    }
   
   .btn-confirm {
-    background-color: #4caf50;
-    color: #fff;
+    background-color: var(--secondary-color);
+  color: #fff;
   }
-  
-  .btn-cancel {
-    background-color: #f44336;
-    color: #fff;
-  }
-
+ 
 /*Animación para modificación de stock*/
 
 .fade-in {
@@ -237,6 +304,11 @@ input[type="text"], input[type="number"] {
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+.nuevo {
+    transition: color 0.3s ease;
+}
+
 
 /*Show more links*/
 
@@ -252,30 +324,20 @@ input[type="text"], input[type="number"] {
 
 /* Accordion efect */
 
-.acordion-container {
-    margin-top: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 6px var(--box-shadow);
-}
-
 .accordion {
-    background-color: #f5f5f5;
+    background-color: #fff;
     color: #333;
     cursor: pointer;
-    padding: 15px;
-    width: 100%;
+    padding: 10px;
     border: none;
     text-align: left;
     font-size: 16px;
     font-weight: bold;
     outline: none;
+    display: flex;
+    justify-content: space-between;
+    align-self: center;
     transition: background-color 0.3s ease;
-}
-
-.accordion:hover {
-    background-color: #e2e2e2;
 }
 
 .accordion-content {
@@ -284,25 +346,16 @@ input[type="text"], input[type="number"] {
     transition: max-height 0.3s ease-out;
   }
   
-
-
-  .accordion, .accordion-content, .btn{
-    font-size: 18px;
+.accordion-content.open {
+    max-height: none; /* Ajusta según el contenido esperado */
   }
 
-
-
-  .accordion.active + .accordion-content {
-    max-height: 500px; /* Ajusta según el contenido esperado */
-  }
-  
-
-.accordion-content p, .accordion-content ul{
-    margin: 0;
-    padding: 0;
-    list-style: none;
+.rotate {
+    transform: rotate(180deg);
+    transition: transform 0.3s ease;
 }
 
+/* Botón de limpiar */
 .btn-clear {
     display: block;
     margin: 10px auto 0;
